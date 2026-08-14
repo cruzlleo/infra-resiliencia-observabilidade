@@ -38,6 +38,17 @@ Alertas de latência de disco levaram a uma investigação que identificou volum
 - Zerou a latência de I/O reportada pelos alertas imediatamente.
 - Evitou um custo de expansão de storage que estava sendo cogitado antes da causa raiz ser identificada — economia direta ao invés de investimento em capacidade adicional.
 
+## Abordagem — Continuidade de conectividade (failover automático)
+
+O gateway de borda dependia de um único link de internet — qualquer instabilidade da operadora tirava a empresa inteira do ar. Solução: um segundo link de operadora diferente, com um script próprio monitorando ambos:
+
+- Verificação de saúde de cada link a cada minuto (via cron, não um daemon separado — simplicidade deliberada para um componente crítico).
+- Troca automática de rota default para o link backup ao detectar falha, com reversão automática assim que o link principal volta.
+- Reinício automático de um túnel VPN site-to-site dependente do link ativo, para não deixar a rota da VPN presa no link antigo depois de uma troca.
+- Alertas (mensageria + e-mail) e métrica reportada à ferramenta de monitoramento a cada mudança de estado — com deduplicação para não alertar repetidamente enquanto o estado não muda.
+
+Resultado: instabilidade de um dos links deixou de significar "empresa sem internet" — a troca acontece sozinha, tipicamente em menos de um minuto, sem intervenção manual.
+
 ## O que eu tiraria disso pra próxima vez
 
 - Observabilidade de negócio (não só infraestrutura) paga o investimento rápido: métricas customizadas revelaram padrões que uma ferramenta genérica de monitoramento não capturava.
@@ -46,4 +57,4 @@ Alertas de latência de disco levaram a uma investigação que identificou volum
 
 ---
 
-**Stack:** Grafana · PostgreSQL · isc-dhcp-server · BIND9 · OpenVPN · Docker
+**Stack:** Grafana · PostgreSQL · isc-dhcp-server · BIND9 · OpenVPN · Docker · Bash/cron
